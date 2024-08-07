@@ -29,15 +29,22 @@ class _AdminPanelState extends State<AdminPanel> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ManageBooks()),
-                );
-              },
-              child: const Text('Manage Books'),
-            ),
+           ElevatedButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ManageBooks()),
+    );
+  },
+  child: const Text('Manage Books',style: TextStyle(color: Color.fromARGB(255, 3, 3, 3)),),
+  style: ElevatedButton.styleFrom(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.zero, // Set border radius to zero for a rectangular shape
+    ),
+    backgroundColor: const Color.fromARGB(255, 207, 203, 203)
+  ),
+),
+
             ElevatedButton(
               onPressed: () {
                 Navigator.push(

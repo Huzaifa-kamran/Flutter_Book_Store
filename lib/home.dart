@@ -207,32 +207,91 @@ class _HomeState extends State<Home> {
             ),
             SizedBox(height: 10),
 
-            StreamBuilder(
-                stream:
-                    FirebaseFirestore.instance.collection("Books").snapshots(),
-                builder: (context, snapshot) {
-                   final data = snapshot.requireData;
-          return ListView.builder(
-          itemCount: data.size,
-          itemBuilder: (context, index) {
-            var book = data.docs[index];
-            return BookCard(
-              title: book['title'],
-              description: book['description'],
-              imageUrl: book['imageUrl'],
-              price: book['price'].toDouble(),
-              rating: book['rating'].toDouble(), // Assuming there's a rating field
-            );
-          },
-        );
-                }),
+//      StreamBuilder(
+//   stream: FirebaseFirestore.instance.collection("Books").snapshots(),
+//   builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+//     // Check for errors
+//     if (snapshot.hasError) {
+//       return Center(child: Text('Something went wrong'));
+//     }
 
-            BookCard(
-                title: "book",
-                description: "lorem ipsum sadas ",
-                imageUrl: "images/book.jpg",
-                price: 23,
-                rating: 3)
+//     // Check for data availability
+//     if (snapshot.connectionState == ConnectionState.waiting) {
+//       return Center(child: CircularProgressIndicator());
+//     }
+
+//     // Retrieve the data
+//     final data = snapshot.requireData;
+
+//     return ListView.builder(
+//       shrinkWrap: true,
+//       physics: NeverScrollableScrollPhysics(),
+//       itemCount: data.size,
+//       itemBuilder: (context, index) {
+//         var book = data.docs[index];
+//         var imageUrl = book['imageUrl'].trim(); // Ensure no leading/trailing whitespace
+
+//         print('Loading image: $imageUrl'); // Debugging: Print the URL
+
+//         return Container(
+//           height: 200,
+//           width: 200,
+//           child: Image.network(
+//             imageUrl,
+//             fit: BoxFit.cover,
+//             loadingBuilder: (context, child, loadingProgress) {
+//               if (loadingProgress == null) return child;
+//               return Center(
+//                 child: CircularProgressIndicator(
+//                   value: loadingProgress.expectedTotalBytes != null
+//                       ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
+//                       : null,
+//                 ),
+//               );
+//             },
+//             errorBuilder: (context, error, stackTrace) {
+//               print('Error loading image: $error'); // Debugging: Print the error
+//               return Center(child: Text('Image not available'));
+//             },
+//           ),
+//         );
+//       },
+//     );
+//   },
+// )
+
+ StreamBuilder(
+  stream:FirebaseFirestore.instance.collection("Books").snapshots(),
+  builder: (context,snapshots){
+        return ListView.builder(
+        shrinkWrap:true,
+        itemCount: snapshots.data!.docs.length,
+        itemBuilder: (context,index){
+          DocumentSnapshot documentSnapshot = snapshots.data!.docs[index];
+          return Dismissible(
+            onDismissed: (direction){
+                    // deleteTodos(documentSnapshot["todoTitle"]);
+            },
+            key:Key(documentSnapshot["title"]), 
+            child:Card(
+              elevation: 4,
+              margin: EdgeInsets.all(8),
+              shape:RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
+              child: ListTile(
+                title:Text(documentSnapshot["title"]),
+                trailing: IconButton(icon: Icon(Icons.delete, color:Colors.red),
+                onPressed:(){
+                  setState(() {
+                    // deleteTodos(documentSnapshot["todoTitle"]);
+                  });
+                }),
+              ),
+            ));
+        });
+      }),
+
+
           ],
         ),
       ),

@@ -6,7 +6,7 @@ class BookCard extends StatelessWidget {
   final String description;
   final String imageUrl;
   final double price;
-  final double rating; // Assuming you have a rating system
+  final double rating = 4; // Assuming you have a rating system
 
   const BookCard({
     super.key,
@@ -14,14 +14,17 @@ class BookCard extends StatelessWidget {
     required this.description,
     required this.imageUrl,
     required this.price,
-    required this.rating,
+    // required this.rating,
   });
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth = MediaQuery.of(context).size.width;
+     final screenWidth = MediaQuery.of(context).size.height;
+    final containerWidth = screenWidth * 0.2;
+
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10),
+      width: containerWidth,
+      // padding: EdgeInsets.symmetric(horizontal: 10),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,16 +33,18 @@ class BookCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 105,
-                height: 130,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(imageUrl), // Use NetworkImage for dynamic image URL
-                    fit: BoxFit.cover,
-                  ),
+                 width: 80,
+                 height: 80,
+                 child: 
+                 Image.network(imageUrl),
+                // decoration: BoxDecoration(
+                //   image: DecorationImage(
+                //     image: NetworkImage(imageUrl), // Use NetworkImage for dynamic image URL
+                //     fit: BoxFit.cover,
+                //   ),
                 ),
-              ),
-              SizedBox(width: 10),
+              
+              SizedBox(width: 5),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +63,7 @@ class BookCard extends StatelessWidget {
                             SizedBox(height: 5),
                             // Fixed width for product description
                             Container(
-                              width: screenWidth * 0.35, // Adjust width as needed
+                              // width: containerWidth, // Adjust width as needed
                               child: Text(
                                 description,
                                 style: TextStyle(color: Colors.grey),
