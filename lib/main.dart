@@ -24,7 +24,7 @@ void main() async {
 
   runApp(const MaterialApp(
     debugShowCheckedModeBanner: false,
-    home: AdminPanel(),
+    home: Profile(),
   ));
 }
 
