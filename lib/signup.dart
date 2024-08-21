@@ -22,6 +22,15 @@ class _SignupState extends State<Signup> {
     final screenHeight = MediaQuery.of(context).size.height;
     final containerHeight = screenHeight * 0.2;
     return Scaffold(
+       appBar: AppBar(
+        leading: GestureDetector(
+          onTap: (){
+            Navigator.pop(context); // Navigate back to the previous page when the back button is tapped
+          },
+          child: Icon(Icons.arrow_back_ios_new),
+        ),
+        backgroundColor: const Color.fromARGB(0, 255, 255, 255),
+      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -227,7 +236,9 @@ class _SignupState extends State<Signup> {
           'name': userName,
           'email': userEmail,
           'password': userPass,
-          'userrole': 'customer'
+          'userrole': 'customer',
+          'image': "",
+          'address': ""
         })
         .then((value){
           ScaffoldMessenger.of(context).showSnackBar(

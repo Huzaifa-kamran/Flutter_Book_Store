@@ -1,30 +1,50 @@
-import 'package:bookstore/books.dart';
+import 'package:bookstore/Profile.dart';
+import 'package:bookstore/addbooks.dart';
 import 'package:bookstore/cart.dart';
 import 'package:bookstore/favorite.dart';
 import 'package:bookstore/home.dart';
 import 'package:bookstore/login.dart';
+import 'package:bookstore/productDetail.dart';
 import 'package:bookstore/splash.dart';
-import 'package:bookstore/userProfile.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'cart_model.dart'; // Import your CartModel
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  Firebase.initializeApp(
-      options: const FirebaseOptions(
-          apiKey: 'AIzaSyCz11G-y7W4oUYHEN7nxkEUSVU6j2twsGQ',
-          appId: '1:527638839997:android:6c00d262e472d06eb02dd4',
-          messagingSenderId: '527638839997',
-          projectId: 'book-store-e6aa6',
-          storageBucket: 'book-store-e6aa6.appspot.com'
-          ));
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: 'AIzaSyCz11G-y7W4oUYHEN7nxkEUSVU6j2twsGQ',
+      appId: '1:527638839997:android:6c00d262e472d06eb02dd4',
+      messagingSenderId: '527638839997',
+      projectId: 'book-store-e6aa6',
+      storageBucket: 'book-store-e6aa6.appspot.com',
+    ),
+  );
 
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: Main(),
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+            create: (_) => CartModel()), // Provide CartModel here
+      ],
+      child: const MyApp(), // Ensure you are using the correct root widget
+    ),
+  );
+}
 
-  ));
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Main(),
+    );
+  }
 }
 
 class Main extends StatefulWidget {
@@ -35,54 +55,52 @@ class Main extends StatefulWidget {
 }
 
 class _MainState extends State<Main> {
-  late List<Widget> pages;
-
-  late Home HomePage;
-  late Favorite FavoritePage;
-  late Cart CartPage;
-  late UserProfile UserProfilePage;
+  late final List<Widget> pages;
   int currentIndex = 0;
-@override
-  void initState() {
-    HomePage = Home();
-    FavoritePage = Favorite();
-    CartPage = Cart();
-    UserProfilePage = UserProfile();
-     pages = [HomePage, FavoritePage, CartPage, UserProfilePage];
-    super.initState();
-  }
-  Widget build(BuildContext context) {
-   return Scaffold(
-      bottomNavigationBar: CurvedNavigationBar(
-          height: 55,
-          color: Colors.black,
-          backgroundColor: const Color.fromARGB(0, 0, 0, 0),
-          onTap: (index){
-            setState(() {
-              currentIndex = index;
-            });
-          },
-          items: [
-            Icon(
-              Icons.home_outlined,
-              color: Colors.white,
-            ),
-            Icon(
-              Icons.favorite_border_outlined,
-              color: Colors.white,
-            ),
-            Icon(
-              Icons.shopping_cart_outlined,
-              color: Colors.white,
-            ),
-            Icon(
-              Icons.person_2_outlined,
-              color: Colors.white,
-            ),
-          ]),
 
-          body: pages[currentIndex],
-       
-    );;
+  @override
+  void initState() {
+    super.initState();
+    pages = const [
+      Home(),
+      Favorite(),
+      Cart(),
+      Profile(),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      bottomNavigationBar: CurvedNavigationBar(
+        height: 55,
+        color: Colors.black,
+        backgroundColor: const Color.fromARGB(0, 0, 0, 0),
+        onTap: (index) {
+          setState(() {
+            currentIndex = index;
+          });
+        },
+        items: const [
+          Icon(
+            Icons.home_outlined,
+            color: Colors.white,
+          ),
+          Icon(
+            Icons.favorite_border_outlined,
+            color: Colors.white,
+          ),
+          Icon(
+            Icons.shopping_basket,
+            color: Colors.white,
+          ),
+          Icon(
+            Icons.person_2_outlined,
+            color: Colors.white,
+          ),
+        ],
+      ),
+      body: pages[currentIndex],
+    );
   }
 }

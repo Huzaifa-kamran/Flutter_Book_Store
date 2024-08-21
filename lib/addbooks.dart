@@ -44,7 +44,7 @@ class _ManageBooksState extends State<ManageBooks> {
         // Handle the case when no file is picked or the bytes are null
         return;
       }
-      final path = 'files/${pickedfile!.name}';
+      final path = 'books/${pickedfile!.name}';
       final ref = FirebaseStorage.instance.ref().child(path);
       print(path);
       setState(() {
@@ -93,10 +93,7 @@ class _ManageBooksState extends State<ManageBooks> {
     });
   }
 
-
-
 // methods
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

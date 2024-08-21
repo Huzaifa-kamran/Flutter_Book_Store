@@ -2,9 +2,11 @@ import 'dart:ui';
 
 import 'package:bookstore/adminPanel.dart';
 import 'package:bookstore/customerPanel.dart';
+import 'package:bookstore/main.dart';
 import 'package:bookstore/signup.dart';
+import 'package:bookstore/snackbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
 class Login extends StatefulWidget {
@@ -23,6 +25,15 @@ class _LoginState extends State<Login> {
     final screenHeight = MediaQuery.of(context).size.height;
     final containerHeight = screenHeight * 0.2;
     return Scaffold(
+       appBar: AppBar(
+        leading: GestureDetector(
+          onTap: (){
+            Navigator.pop(context); // Navigate back to the previous page when the back button is tapped
+          },
+          child: Icon(Icons.arrow_back_ios_new),
+        ),
+   
+      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -182,27 +193,37 @@ class _LoginState extends State<Login> {
     var userFetchData = user_data.data();
 
     if (userFetchData is Map<String, dynamic>) {
+      var userPassword = userFetchData['password'];
       var userRole = userFetchData["userrole"];
       var userName = userFetchData['name'];
 
-      if (userRole == "admin") {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Login Successful Welcome ' + userName),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2)));
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (context) => const AdminPanel()));
-      } else if (userRole == "customer") {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Login Successful Welcome ' + userName),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ));
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (context) => const CustomerPanel()));
+      if (password == userPassword) {
+        // Save user data in shared preferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('email', email);
+        await prefs.setString('name', userName);
+        await prefs.setString('role', userRole);
+        if (userRole == "admin") {
+
+          CustomSnackbar.showSnackbar(
+              context, 'Login Successful Welcome $userName', "success");
+
+
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => const AdminPanel()));
+        } else if (userRole == "customer") {
+          CustomSnackbar.showSnackbar(
+              context, 'Login Successful Welcome $userName', "success");
+          Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (context) => const Main()));
+        }
+      } else {
+       CustomSnackbar.showSnackbar(
+              context, 'Invalid Credentials', "error");
       }
     } else {
-      print("credential wrong");
+     CustomSnackbar.showSnackbar(
+              context, 'Invalid Credentials', "error");
     }
   }
 }

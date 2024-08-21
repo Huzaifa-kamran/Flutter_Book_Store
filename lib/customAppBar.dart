@@ -20,7 +20,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               print('Profile button pressed');
             },
             child: CircleAvatar(
-              backgroundImage: AssetImage("images/user.jpg"),
+              backgroundImage: AssetImage("images/user2.jpg"),
               radius: 20,
             ),
           ),
