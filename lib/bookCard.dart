@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'cart_model.dart';
 import 'bookClass.dart';
@@ -16,6 +17,7 @@ class BookCard extends StatefulWidget {
   final String author;
   final double price;
   final double rating;
+  final bool favorite;
 
   const BookCard({
     super.key,
@@ -26,6 +28,7 @@ class BookCard extends StatefulWidget {
     required this.author,
     required this.price,
     required this.rating,
+    required this.favorite,
   });
 
   @override
@@ -34,24 +37,26 @@ class BookCard extends StatefulWidget {
 
 class _BookCardState extends State<BookCard> {
   bool isWishlisted = false;
-  User? currentUser;
+  bool _isLoggedIn = false;
+  String? email;
 
   @override
   void initState() {
     super.initState();
-    _checkLoginStatus();
+    checkLoginStatus();
     _checkIfWishlisted();
   }
 
-  Future<void> _checkLoginStatus() async {
-    final user = FirebaseAuth.instance.currentUser;
+  Future<void> checkLoginStatus() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    email = prefs.getString('email');
     setState(() {
-      currentUser = user;
+      _isLoggedIn = email != null;
     });
   }
 
   Future<void> _checkIfWishlisted() async {
-    if (currentUser == null) {
+    if (_isLoggedIn != false) {
       setState(() {
         isWishlisted = false; // Not logged in, cannot be wishlisted
       });
@@ -61,7 +66,7 @@ class _BookCardState extends State<BookCard> {
     try {
       final wishlistDoc = await FirebaseFirestore.instance
           .collection('wishlist')
-          .doc(currentUser!.uid)
+          .doc(email)
           .collection('books')
           .doc(widget.id)
           .get();
@@ -75,14 +80,14 @@ class _BookCardState extends State<BookCard> {
   }
 
   Future<void> _toggleWishlist() async {
-    if (currentUser == null) {
+    if (_isLoggedIn == false) {
       _showLoginPrompt();
       return;
     }
 
     final wishlistRef = FirebaseFirestore.instance
         .collection('wishlist')
-        .doc(currentUser!.uid)
+        .doc(email)
         .collection('books')
         .doc(widget.id);
 
@@ -238,8 +243,11 @@ class _BookCardState extends State<BookCard> {
                 children: [
                   IconButton(
                     icon: Icon(
-                      isWishlisted ? Icons.favorite : Icons.favorite_border,
-                      color: isWishlisted ? Colors.red : Colors.grey,
+                      widget.favorite != false ? Icons.favorite : Icons.favorite_border,
+                      color:  widget.favorite !=false ? Colors.red : Colors.grey,
+                      // isWishlisted ? Icons.favorite : Icons.favorite_border,
+                      // color: isWishlisted ? Colors.red : Colors.grey,
+                      
                     ),
                     onPressed: _toggleWishlist,
                   ),

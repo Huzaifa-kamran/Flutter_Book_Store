@@ -3,6 +3,7 @@ import 'package:bookstore/bookCard.dart';
 // import 'package:bookstore/customAppBar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -13,7 +14,15 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   String? selectedCategory;
+  String? email;
   TextEditingController searchController = TextEditingController();
+
+  Future<void> checkLoginStatus() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      email = prefs.getString('email');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -198,6 +207,22 @@ class _HomeState extends State<Home> {
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     var book = data[index].data() as Map<String, dynamic>;
+                    bool favorite = false;
+                    FirebaseFirestore.instance
+                        .collection("wishlist")
+                        .doc(email)
+                        .collection('Books')
+                        .doc(data[index].id)
+                        .get()
+                        .then((DocumentSnapshot documentSnapshot) {
+                      if (documentSnapshot.exists) {
+                        favorite = true;
+                      } else {
+                        favorite = false;
+                        // The document does not exist
+                        // Handle the non-existent document case
+                      }
+                    });
                     return BookCard(
                       id: data[index].id,
                       imageUrl: book['imageUrl'] ?? '',
@@ -206,6 +231,7 @@ class _HomeState extends State<Home> {
                       author: book['author'] ?? '',
                       price: book['price']?.toDouble() ?? 0.0,
                       rating: book['rating']?.toDouble() ?? 0.0,
+                      favorite: favorite,
                     );
                   },
                   childCount: data.length,

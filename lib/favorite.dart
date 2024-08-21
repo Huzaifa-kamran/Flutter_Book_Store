@@ -26,6 +26,7 @@ class _FavoriteState extends State<Favorite> {
     setState(() {
       _isLoggedIn = email != null;
       _userEmail = email;
+      print(_userEmail);
     });
   }
 
@@ -111,6 +112,8 @@ class _FavoriteState extends State<Favorite> {
           }).toList();
 
           if (wishlistBooks == null || wishlistBooks.isEmpty) {
+            print(wishlistBooks);
+            print("empty wishlist");
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
