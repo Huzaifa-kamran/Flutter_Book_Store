@@ -1,9 +1,15 @@
 import 'dart:ui';
-
+import 'dart:typed_data'; // Needed for Uint8List
 import 'package:bookstore/login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' as foundation; // For checking platform
+
+// Import platform-specific packages
+import 'package:image_picker/image_picker.dart'; // Import only for mobile
+import 'dart:html' as html; // Import only for web
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -15,22 +21,19 @@ class Signup extends StatefulWidget {
 class _SignupState extends State<Signup> {
   final TextEditingController passController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController idController = TextEditingController(text: '1');
   final TextEditingController nameController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  // Variable to store the selected image
+  Uint8List? _imageBytes;
+  final ImagePicker _picker = ImagePicker(); // Image Picker instance
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final containerHeight = screenHeight * 0.2;
+
     return Scaffold(
-       appBar: AppBar(
-        leading: GestureDetector(
-          onTap: (){
-            Navigator.pop(context); // Navigate back to the previous page when the back button is tapped
-          },
-          child: Icon(Icons.arrow_back_ios_new),
-        ),
-        backgroundColor: const Color.fromARGB(0, 255, 255, 255),
-      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -85,129 +88,95 @@ class _SignupState extends State<Signup> {
                         Container(
                           width: 300,
                           padding: const EdgeInsets.all(15),
-                          child: Column(
-                            children: [
-                              Visibility(
-                                visible: false,
-                                child: TextFormField(
-                                  readOnly: true,
-                                  controller: idController,
-                                  decoration: const InputDecoration(
-                                    hintText: "Enter User ID",
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 15),
-                              TextFormField(
-                                controller: nameController,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.grey[200],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                    borderSide: const BorderSide(
-                                      color: Color.fromARGB(130, 14, 23, 199),
-                                      width: 3.0,
-                                    ),
-                                  ),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              children: [
+                                _buildProfilePicPicker(),
+                                const SizedBox(height: 15),
+                                _buildTextField(
+                                  controller: nameController,
                                   hintText: "Enter Username",
-                                  suffixIcon: const Icon(Icons.person),
+                                  icon: Icons.person,
+                                  validator: (value) => value!.isEmpty
+                                      ? 'Please enter a username'
+                                      : null,
                                 ),
-                                keyboardType: TextInputType.text,
-                              ),
-                              const SizedBox(height: 15),
-                              TextFormField(
-                                controller: emailController,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.grey[200],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                    borderSide: const BorderSide(
-                                      color: Color.fromARGB(130, 14, 23, 199),
-                                      width: 3.0,
-                                    ),
-                                  ),
+                                const SizedBox(height: 15),
+                                _buildTextField(
+                                  controller: emailController,
                                   hintText: "Enter Email",
-                                  suffixIcon: const Icon(Icons.email),
+                                  icon: Icons.email,
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (value) => value!.isEmpty ||
+                                          !RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                              .hasMatch(value)
+                                      ? 'Enter a valid email'
+                                      : null,
                                 ),
-                                keyboardType: TextInputType.emailAddress,
-                              ),
-                              const SizedBox(height: 15),
-                              TextFormField(
-                                controller: passController,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.grey[200],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                    borderSide: const BorderSide(
-                                      color: Color.fromARGB(130, 14, 23, 199),
-                                      width: 3.0,
-                                    ),
-                                  ),
+                                const SizedBox(height: 15),
+                                _buildTextField(
+                                  controller: passController,
                                   hintText: "Enter Password",
-                                  suffixIcon: const Icon(Icons.lock),
+                                  icon: Icons.lock,
+                                  obscureText: true,
+                                  validator: (value) => value!.isEmpty ||
+                                          value.length < 6
+                                      ? 'Password must be at least 6 characters long'
+                                      : null,
                                 ),
-                                obscureText: true,
-                              ),
-                              const SizedBox(height: 20),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  shape: const StadiumBorder(
-                                    side: BorderSide(
-                                        color: Colors.black, width: 2.2),
-                                  ),
-                                ),
-                                onPressed: () {
-                                  addUser();
-                                },
-                                icon: const Icon(Icons.login),
-                                label: const Text('Signup'),
-                              ),
-                              const SizedBox(height: 50),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Text(
-                                    "Already have an account?",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      shadows: [
-                                        Shadow(
-                                          offset: Offset(2.0, 2.0),
-                                          blurRadius: 3.0,
-                                          color: Color.fromARGB(
-                                              128, 248, 244, 244),
-                                        ),
-                                      ],
+                                const SizedBox(height: 20),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    shape: const StadiumBorder(
+                                      side: BorderSide(
+                                          color: Colors.black, width: 2.2),
                                     ),
                                   ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => const Login(),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text(
-                                      'Login',
+                                  onPressed: () {
+                                    if (_formKey.currentState!.validate()) {
+                                      addUser();
+                                    }
+                                  },
+                                  icon: const Icon(Icons.login),
+                                  label: const Text('Signup'),
+                                ),
+                                const SizedBox(height: 50),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text(
+                                      "Already have an account?",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        shadows: [
+                                          Shadow(
+                                            offset: Offset(2.0, 2.0),
+                                            blurRadius: 3.0,
+                                            color: Color.fromARGB(
+                                                128, 248, 244, 244),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const Login(),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text(
+                                        'Login',
+                                        style: TextStyle(color: Colors.blue),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -222,43 +191,141 @@ class _SignupState extends State<Signup> {
     );
   }
 
-  void addUser() async {
+  Widget _buildProfilePicPicker() {
+    return Column(
+      children: [
+        _imageBytes != null
+            ? CircleAvatar(
+                radius: 50,
+                backgroundImage: MemoryImage(_imageBytes!),
+              )
+            : const CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.grey,
+                child: Icon(Icons.camera_alt, color: Colors.white),
+              ),
+        TextButton(
+          onPressed: _pickImage,
+          child: const Text('Select Profile Picture'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
+    FormFieldValidator<String>? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.grey[200],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(
+            color: Color.fromARGB(130, 14, 23, 199),
+            width: 3.0,
+          ),
+        ),
+        hintText: hintText,
+        suffixIcon: Icon(icon),
+      ),
+      validator: validator,
+    );
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      if (foundation.kIsWeb) {
+        final html.FileUploadInputElement uploadInput =
+            html.FileUploadInputElement();
+        uploadInput.accept = 'image/*';
+        uploadInput.click();
+
+        uploadInput.onChange.listen((e) async {
+          final files = uploadInput.files;
+          if (files!.isEmpty) return;
+          final reader = html.FileReader();
+          reader.readAsArrayBuffer(files[0]);
+          reader.onLoadEnd.listen((e) {
+            setState(() {
+              _imageBytes = reader.result as Uint8List;
+            });
+          });
+        });
+      } else {
+        final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+        if (pickedFile != null) {
+          final bytes = await pickedFile.readAsBytes();
+          setState(() {
+            _imageBytes = bytes;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error picking image: $e");
+    }
+  }
+
+  Future<void> addUser() async {
     CollectionReference users = FirebaseFirestore.instance.collection('Users');
-    String userId = idController.text;
     String userName = nameController.text;
     String userPass = passController.text;
     String userEmail = emailController.text;
 
-    await users
-        .doc(userEmail)
-        .set({
-          'id': userId,
-          'name': userName,
-          'email': userEmail,
-          'password': userPass,
-          'userrole': 'customer',
-          'image': "",
-          'address': ""
-        })
-        .then((value){
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Signup Successful"),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
-            );
-            Navigator.push(context, MaterialPageRoute(builder: (context)=>Login()));
-        })
-        .catchError((error) => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Signup Unsuccessful"),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 2),
-              ),
-            ));
-    passController.clear();
-    emailController.clear();
-    nameController.clear();
+    String? imageUrl;
+    if (_imageBytes != null && !foundation.kIsWeb) {
+      try {
+        final storageRef =
+            FirebaseStorage.instance.ref().child('profile_pics/${userEmail}');
+        final uploadTask = storageRef.putData(_imageBytes!);
+        final snapshot = await uploadTask.whenComplete(() {});
+        imageUrl = await snapshot.ref.getDownloadURL();
+      } catch (e) {
+        print("Error uploading image: $e");
+      }
+    }
+
+    try {
+      await users.doc(userEmail).set({
+        'id': userEmail, // Use email as ID
+        'name': userName,
+        'email': userEmail,
+        'password': userPass, // Consider hashing the password before storing
+        'userrole': 'customer',
+        'image': imageUrl ??
+            "", // Use uploaded image URL or empty string if no image
+        'address': ""
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Signup successful'),
+        ),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const Login(),
+        ),
+      );
+    } catch (e) {
+      print("Error adding user: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error signing up'),
+        ),
+      );
+    }
   }
 }

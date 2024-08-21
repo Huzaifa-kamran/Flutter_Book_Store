@@ -1,0 +1,51 @@
+name: bookstore
+description: "A new Flutter project."
+
+# Prevent accidental publishing to pub.dev.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.3 <4.0.0'
+
+dependencies:
+  cloud_firestore: ^5.1.0
+  firebase_core: ^3.2.0
+  firebase_storage: ^12.1.2
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  curved_navigation_bar: ^1.0.6
+  image_picker: ^1.1.2
+  file_picker: ^5.1.0  
+  provider:
+  shared_preferences:  
+  firebase_auth: ^5.1.4
+  cached_network_image: ^3.4.0
+  flutter_charts: ^0.5.2
+  cupertino_icons: ^1.0.8
+  animated_text_kit: ^4.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Enable generation of localized Strings from arb files.
+  generate: true
+
+  assets:
+    # Add assets from the images directory to the application.
+    - assets/images/
+    - assets/images/books.jpg
+    - assets/images/download.gif
+    - assets/images/BookStore.jpg
+    - assets/images/splash.jpg
+    
+

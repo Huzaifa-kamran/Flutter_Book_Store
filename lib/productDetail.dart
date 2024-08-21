@@ -1,48 +1,46 @@
 import 'package:bookstore/bookClass.dart';
 import 'package:bookstore/cart_model.dart';
-import 'package:bookstore/customAppBar.dart';
-import 'package:bookstore/drawer.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final String productId;
 
-  const ProductDetailPage({Key? key, required this.productId}) : super(key: key);
+  const ProductDetailPage({Key? key, required this.productId})
+      : super(key: key);
 
   Future<Map<String, dynamic>?> fetchProductDetails(String id) async {
     try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance.collection('Books').doc(id).get();
+      DocumentSnapshot doc =
+          await FirebaseFirestore.instance.collection('Books').doc(id).get();
       if (doc.exists) {
-        print('Document data: ${doc.data()}');  // Log document data
         return doc.data() as Map<String, dynamic>?;
       } else {
-        print('No document found with id: $id');  // Log if no document found
         throw Exception("Product not found");
       }
     } catch (e) {
-      print('Error fetching product details: $e');  // Log the error
-      throw Exception("Error fetching product details: $e");
+      print('Error fetching product details: $e');
+      throw Exception("Error fetching product details");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-     backgroundColor: Color.fromRGBO(250, 250, 249, 1),
+      backgroundColor: Color.fromRGBO(250, 250, 249, 1),
       appBar: AppBar(
         leading: GestureDetector(
-          onTap: (){
-            Navigator.pop(context); // Navigate back to the previous page when the back button is tapped
-          },
+          onTap: () => Navigator.pop(context),
           child: Icon(Icons.arrow_back_ios_new),
         ),
         backgroundColor: Colors.white,
+        title: Text('Product Details', style: TextStyle(color: Colors.black)),
+        iconTheme: IconThemeData(color: Colors.black),
+        elevation: 0,
       ),
-      body:
-       FutureBuilder<Map<String, dynamic>?>(
-        future: fetchProductDetails(productId),  // Correctly pass the future
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: fetchProductDetails(productId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -80,12 +78,32 @@ class ProductDetailPage extends StatelessWidget {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                imageUrl,
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
+                              child: imageUrl.isNotEmpty
+                                  ? Image.network(
+                                      imageUrl,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                        if (loadingProgress == null) {
+                                          return child;
+                                        } else {
+                                          return Center(
+                                            child: CircularProgressIndicator(),
+                                          );
+                                        }
+                                      },
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return Center(
+                                            child: Icon(Icons.error,
+                                                color: Colors.red));
+                                      },
+                                    )
+                                  : Center(
+                                      child: Icon(Icons.image,
+                                          size: 100, color: Colors.grey)),
                             ),
                           ),
                           Positioned(
@@ -117,7 +135,8 @@ class ProductDetailPage extends StatelessWidget {
                         SizedBox(width: 8),
                         Text(
                           "$rating",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -143,7 +162,8 @@ class ProductDetailPage extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       'Price: \$${price.toStringAsFixed(2)}',
                       style: TextStyle(
@@ -155,11 +175,11 @@ class ProductDetailPage extends StatelessWidget {
                   ),
                   SizedBox(height: 16),
                   SizedBox(
-                    
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        final cart = Provider.of<CartModel>(context, listen: false);
+                        final cart =
+                            Provider.of<CartModel>(context, listen: false);
                         final book = Book(
                           id: productId,
                           imageUrl: imageUrl,
@@ -189,11 +209,11 @@ class ProductDetailPage extends StatelessWidget {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        
                       ),
                       child: Consumer<CartModel>(
                         builder: (context, cart, child) {
@@ -208,7 +228,8 @@ class ProductDetailPage extends StatelessWidget {
                           return Container(
                             child: cart.isInCart(book)
                                 ? Icon(Icons.check, color: Colors.white)
-                                : Text("Add to Cart", style: TextStyle(color: Colors.white)),
+                                : Text("Add to Cart",
+                                    style: TextStyle(color: Colors.white)),
                           );
                         },
                       ),

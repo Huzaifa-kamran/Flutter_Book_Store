@@ -1,6 +1,11 @@
-import 'package:bookstore/bookClass.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:bookstore/cart_model.dart';
+import 'package:bookstore/cartempty.dart';
+import 'package:bookstore/recipt.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart'; // Add this import for FilteringTextInputFormatter
+import 'bookClass.dart';
+import 'custom_input_formatters.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -14,157 +19,176 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
-  final _formKey = GlobalKey<FormState>();
-  String? _email;
-  final _addressController = TextEditingController();
-  final _cardNumberController = TextEditingController();
-  final _expiryDateController = TextEditingController();
-  final _cvvController = TextEditingController();
+  final TextEditingController cardNumberController = TextEditingController();
+  final TextEditingController expiryDateController = TextEditingController();
+  final TextEditingController cvvController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadUserInfo();
-  }
-
-  @override
-  void dispose() {
-    _addressController.dispose();
-    _cardNumberController.dispose();
-    _expiryDateController.dispose();
-    _cvvController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadUserInfo() async {
+  Future<void> addOrder() async {
+    CollectionReference orders =
+        FirebaseFirestore.instance.collection('Orders');
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? email = prefs.getString('email');
+    String? userEmail = prefs.getString('email');
+    DateTime orderDate = DateTime.now();
 
-    if (email != null) {
-      DocumentSnapshot userDoc =
-          await FirebaseFirestore.instance.collection('Users').doc(email).get();
-      if (userDoc.exists) {
-        Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
-        _addressController.text = data['address'] ?? '';
-        _email = data['email'] ?? '';
-      }
-    }
-  }
-
-  Future<void> _submitOrder() async {
-    if (_formKey.currentState!.validate()) {
-      Map<String, dynamic> orderData = {
-        'userEmail': _email,
-        'address': _addressController.text,
-        'cardNumber': _cardNumberController.text,
-        'expiryDate': _expiryDateController.text,
-        'cvv': _cvvController.text,
+    try {
+      await orders.add({
+        'userEmail': userEmail,
+        'items': widget.cartItems
+            .map((book) => {
+                  'title': book.title,
+                  'quantity': book.quantity,
+                  'price': book.price,
+                  'imageUrl': book.imageUrl
+                })
+            .toList(),
         'totalAmount': widget.totalAmount,
-        'items': widget.cartItems.map((item) => item.toMap()).toList(),
-        'orderDate': DateTime.now().toIso8601String(),
-        'status':'pending'
-      };
+        'orderDate': orderDate.toIso8601String(),
+        'status': 'pending', // Initial status
+      });
 
-      try {
-        await FirebaseFirestore.instance.collection('orders').add(orderData);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Order placed successfully!'),
-              backgroundColor: Colors.green),
-        );
-        Navigator.pop(context, true);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to place order: $e'),
-              backgroundColor: Colors.red),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Order placed successfully'),
+        ),
+      );
+
+      // Navigate to the CheckoutReceipt page
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CheckoutReceipt(
+            cartItems: widget.cartItems,
+            totalAmount: widget.totalAmount,
+          ),
+        ),
+      );
+    } catch (e) {
+      print("Error adding order: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error placing order'),
+        ),
+      );
     }
   }
 
-  Widget _buildTextField(
-      {required TextEditingController controller,
-      required String labelText,
-      TextInputType? keyboardType,
-      bool obscureText = false}) {
-    return TextFormField(
-      controller: controller,
-      
-      decoration: InputDecoration(
-        prefixIcon: Icon(Icons.atm),
-        labelText: labelText, border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                    borderSide: const BorderSide(
-                                        color: Color.fromARGB(130, 14, 23, 199),
-                                        width: 3.0),
-                                  ),),
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter your $labelText';
-        }
-        return null;
+  void showPaymentForm() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Enter Payment Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: cardNumberController,
+                decoration: InputDecoration(labelText: 'Card Number'),
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  CardNumberInputFormatter(),
+                ],
+              ),
+              TextField(
+                controller: expiryDateController,
+                decoration: InputDecoration(labelText: 'Expiry Date (MM/YY)'),
+                keyboardType: TextInputType.datetime,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  ExpiryDateInputFormatter(),
+                ],
+              ),
+              TextField(
+                controller: cvvController,
+                decoration: InputDecoration(labelText: 'CVV'),
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                handlePayment(
+                  cardNumberController.text,
+                  expiryDateController.text,
+                  cvvController.text,
+                );
+                Navigator.pop(context);
+              },
+              child: Text('Confirm Payment'),
+            ),
+          ],
+        );
       },
     );
+  }
+
+  Future<void> handlePayment(
+      String cardNumber, String expDate, String cvv) async {
+    // Simulate payment processing
+    await Future.delayed(Duration(seconds: 2)); // Simulate a delay
+
+    // Simple validation check
+    if (cardNumber.isNotEmpty && expDate.isNotEmpty && cvv.isNotEmpty) {
+      await addOrder();
+      Cartempty();
+    } else {
+      print('Invalid card information');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter valid payment information'),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Checkout')),
+      appBar: AppBar(
+        title: Text('Checkout'),
+      ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTextField(
-                  controller: _addressController, labelText: 'Address'),
-                  SizedBox(height: 12,),
-              _buildTextField(
-                  controller: _cardNumberController,
-                  labelText: 'Card Number',
-                  keyboardType: TextInputType.number),
-                  SizedBox(height: 12,),
-              _buildTextField(
-                  controller: _expiryDateController,
-                  labelText: 'Expiry Date (MM/YY)',
-                  keyboardType: TextInputType.datetime),
-                  SizedBox(height: 12,),
-              _buildTextField(
-                  controller: _cvvController,
-                  labelText: 'CVV',
-                  keyboardType: TextInputType.number,
-                  obscureText: true),
-              Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _submitOrder,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    padding: EdgeInsets.symmetric(horizontal: 60, vertical: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'Place Order',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
-                  ),
-                ),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Items in Cart:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Expanded(
+              child: ListView.builder(
+                itemCount: widget.cartItems.length,
+                itemBuilder: (context, index) {
+                  var book = widget.cartItems[index];
+                  return ListTile(
+                    title: Text(book.title),
+                    subtitle: Text(
+                        'Quantity: ${book.quantity} - Price: \$${book.price.toStringAsFixed(2)}'),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+            Text('Total Amount: \$${widget.totalAmount.toStringAsFixed(2)}',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                onPressed: showPaymentForm,
+                child: Text('Continue to Payment'),
+              ),
+            ),
+          ],
         ),
       ),
     );

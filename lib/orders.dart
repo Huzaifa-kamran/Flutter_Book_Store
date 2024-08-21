@@ -1,112 +1,80 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class OrderManagePage extends StatefulWidget {
-  const OrderManagePage({super.key});
+class ManageOrders extends StatefulWidget {
+  const ManageOrders({Key? key}) : super(key: key);
 
   @override
-  _OrderManagePageState createState() => _OrderManagePageState();
+  _ManageOrdersState createState() => _ManageOrdersState();
 }
 
-class _OrderManagePageState extends State<OrderManagePage> {
-  final CollectionReference _ordersRef = FirebaseFirestore.instance.collection('orders');
-
-  Future<void> _updateOrderStatus(String orderId, String status) async {
+class _ManageOrdersState extends State<ManageOrders> {
+  Future<void> _deleteOrder(String orderId) async {
     try {
-      await _ordersRef.doc(orderId).update({'status': status});
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Order status updated to $status'),
-        backgroundColor: Colors.green,
-      ));
+      await FirebaseFirestore.instance
+          .collection('Orders')
+          .doc(orderId)
+          .delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Order deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Failed to update order status: $e'),
-        backgroundColor: Colors.red,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting order: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  Widget _buildOrderItem(DocumentSnapshot orderDoc) {
-    Map<String, dynamic> orderData = orderDoc.data() as Map<String, dynamic>;
-    String? orderId = orderDoc.id;
-    String? status = orderData['status'];
-    DateTime? orderDate = DateTime.parse(orderData['orderDate']);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: Offset(0, 4),
+  Future<void> _confirmDelete(String orderId) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Order'),
+        content: Text('Are you sure you want to delete this order?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Delete'),
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(8.0),
-        title: Text('Order ID: $orderId'),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Status: $status'),
-            Text('Date: ${_formatDate(orderDate)}'),
-            Text('Total Amount: \$${orderData['totalAmount'].toStringAsFixed(2)}'),
-          ],
-        ),
-        trailing: DropdownButton<String>(
-          value: status,
-          items: ['pending', 'completed']
-              .map((status) => DropdownMenuItem(value: status, child: Text(status)))
-              .toList(),
-          onChanged: (value) {
-            if (value != null) {
-              _updateOrderStatus(orderId, value);
-            }
-          },
-        ),
-        onTap: () => _showOrderDetailsModal(orderDoc),
-      ),
     );
+
+    if (shouldDelete == true) {
+      _deleteOrder(orderId);
+    }
   }
 
-  String _formatDate(DateTime date) {
-    return "${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
-  }
-
-  void _showOrderDetailsModal(DocumentSnapshot orderDoc) {
-    Map<String, dynamic> orderData = orderDoc.data() as Map<String, dynamic>;
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          width: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Order ID: ${orderDoc.id}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
-              Text('Status: ${orderData['status']}'),
-              Text('Date: ${_formatDate(DateTime.parse(orderData['orderDate']))}'),
-              Text('Address: ${orderData['address']}'),
-              SizedBox(height: 10),
-              Text('Items:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ...orderData['items'].map<Widget>((item) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Text('${item['title']} x${item['quantity']} (\$${item['totalPrice'].toStringAsFixed(2)})'),
-                );
-              }).toList(),
-            ],
-          ),
-        );
-      },
-    );
+  Future<void> _updateOrderStatus(String orderId, String status) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('Orders')
+          .doc(orderId)
+          .update({'status': status});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Order status updated to $status'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating order status: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -116,17 +84,78 @@ class _OrderManagePageState extends State<OrderManagePage> {
         title: Text('Manage Orders'),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _ordersRef.snapshots(),
+        stream: FirebaseFirestore.instance.collection('Orders').snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Something went wrong'));
-          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           }
 
-          return ListView(
-            children: snapshot.data!.docs.map(_buildOrderItem).toList(),
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text('No orders found'));
+          }
+
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              var order = snapshot.data!.docs[index];
+              return Card(
+                margin: EdgeInsets.all(10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                elevation: 8,
+                child: ListTile(
+                  title: Text('Order ID: ${order.id}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Order Date: ${order['orderDate']}'),
+                      Row(
+                        children: [
+                          Text('Status:'),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            child: Text(
+                              order['status'],
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            decoration: BoxDecoration(
+                              color: order['status'] == 'accepted'
+                                  ? Colors.green
+                                  : order['status'] == 'declined'
+                                      ? Colors.red
+                                      : Colors.orange,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text('Total Amount: \$${order['totalAmount']}'),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.check, color: Colors.green),
+                        onPressed: () =>
+                            _updateOrderStatus(order.id, 'accepted'),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.cancel, color: Colors.red),
+                        onPressed: () =>
+                            _updateOrderStatus(order.id, 'declined'),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () => _confirmDelete(order.id),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
